@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import './style/ChatPage.css'
+import MessageBubble from '../components/MessageBubble'
 
 const ChatPage = () => {
 
@@ -11,7 +12,7 @@ const ChatPage = () => {
   const finalTextRef = useRef('')
   const silenceTimerRef = useRef(null)
 
-  const SILENCE_DELAY = 1500 // 👈 ms (adjustable)
+  const SILENCE_DELAY = 2000 // 👈 ms (adjustable)
 
   useEffect(() => {
     const SpeechRecognition =
@@ -112,7 +113,7 @@ const ChatPage = () => {
         <section className="chatpage-body">
 
           <div className="chatpage-messages">
-            Input / Output Messages
+            <MessageBubble text={finalText+interimText} type="in" />
           </div>
 
           <footer className="chatpage-input">
