@@ -4,3 +4,62 @@
   height: 100vh;
   /* overflow: hidden; */
 }
+/* Page wrapper */
+.chatpage {
+  height: 100vh;
+  width: 100%;
+  background-color: #f5f6f8;
+  display: flex;
+}
+
+/* Main window */
+.chatpage-window {
+  flex: 1;
+  margin: 16px;
+  border: 1px solid #d0d0d0;
+  background-color: #ffffff;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header */
+.chatpage-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid #e0e0e0;
+  background-color: #f0f2f5;
+  font-weight: 600;
+}
+
+/* Body */
+.chatpage-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Messages area */
+.chatpage-messages {
+  flex: 1;
+  padding: 16px;
+  border-bottom: 1px solid #e0e0e0;
+  background-color: #fafafa;
+}
+
+/* Input section */
+.chatpage-input {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background-color: #f0f2f5;
+  border-top: 1px solid #e0e0e0;
+}
+
+/* Individual input blocks */
+.chatpage-input > div {
+  padding: 8px 12px;
+  border: 1px solid #d0d0d0;
+  background-color: #ffffff;
+  border-radius: 4px;
+  font-size: 14px;
+}
