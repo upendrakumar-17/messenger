@@ -1,25 +1,33 @@
 import React from 'react'
 import './style/ChatPage.css'
+import Sidebar from '../components/Sidebar'
 
 const ChatPage = () => {
   return (
-    <div className='chatpage'>
-        <div className='sidebar'>
+    <div className="chatpage">
 
-        </div>
-        <div className='chatwindow'>
-            <div className='chatheader'>
+      <Sidebar />
 
-            </div>
-            <div className='chatbody'>  
-                <div className='messagearea'>
+      <main className="chatpage-window">
 
-                </div>
-                <div className='inputarea'>
+        <header className="chatpage-header">
+          {/* header */}
+        </header>
 
-                </div>
-            </div>
-        </div>
+        <section className="chatpage-body">
+
+          <div className="chatpage-messages">
+            {/* messages */}
+          </div>
+
+          <footer className="chatpage-input">
+            {/* input */}
+          </footer>
+
+        </section>
+
+      </main>
+
     </div>
   )
 }
