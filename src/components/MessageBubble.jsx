@@ -1,5 +1,5 @@
-import React from 'react'
-import './MessageBubble.css'
+import React from 'react';
+import './MessageBubble.css';
 
 const MessageBubble = ({ text, type = 'out' }) => {
   return (
@@ -11,4 +11,4 @@ const MessageBubble = ({ text, type = 'out' }) => {
   )
 }
 
-export default MessageBubble
+export default MessageBubble;
