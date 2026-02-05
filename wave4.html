@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Voice Reactive Waves</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: radial-gradient(circle at center, #1b1f3b, #0a0f24);
+      overflow: hidden;
+      font-family: system-ui, sans-serif;
+    }
+
+    canvas {
+      width: 100vw;
+      height: 220px;
+    }
+
+    .hint {
+      position: fixed;
+      bottom: 20px;
+      color: #9fb4ff;
+      opacity: 0.6;
+      font-size: 14px;
+    }
+  </style>
+</head>
+
+<body>
+  <canvas id="voiceWave"></canvas>
+  <div class="hint">🎤 Allow microphone access and speak</div>
+
+  <script>
+    const canvas = document.getElementById('voiceWave')
+    const ctx = canvas.getContext('2d')
+
+    function resize() {
+      canvas.width = window.innerWidth
+      canvas.height = 220
+    }
+    resize()
+    window.addEventListener('resize', resize)
+
+    let audioCtx, analyser, dataArray
+    let time = 0
+
+    const waves = [
+      { color: 'rgba(255,255,255,0.7)', speed: 0.025, amp: 18 },
+      { color: 'rgba(190,210,255,0.55)', speed: 0.02, amp: 26 },
+      { color: 'rgba(130,170,255,0.45)', speed: 0.015, amp: 40 },
+      { color: 'rgba(90,130,255,0.35)', speed: 0.01, amp: 32 },
+      { color: 'rgba(255,255,255,0.7)', speed: 0.005, amp: 12 },
+      { color: 'rgba(190,210,255,0.55)', speed: 0.010, amp: 37 },
+      { color: 'rgba(130,170,255,0.45)', speed: 0.020, amp: 29 },
+      { color: 'rgba(90,130,255,0.35)', speed: 0.03, amp: 50 }
+    ]
+
+    async function initMic() {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)()
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+
+      const source = audioCtx.createMediaStreamSource(stream)
+      analyser = audioCtx.createAnalyser()
+      analyser.fftSize = 512
+
+      dataArray = new Uint8Array(analyser.frequencyBinCount)
+      source.connect(analyser)
+
+      animate()
+    }
+
+    function getVolume() {
+      analyser.getByteFrequencyData(dataArray)
+      const sum = dataArray.reduce((a, b) => a + b, 0)
+      return sum / dataArray.length / 255
+    }
+
+    function drawWave(wave, volume, index) {
+      ctx.beginPath()
+      ctx.strokeStyle = wave.color
+      ctx.lineWidth = 2
+
+      const centerY = canvas.height / 2
+      const amplitude = wave.amp + volume * 140
+      const frequency = 0.01 + index * 0.002
+
+      for (let x = 0; x <= canvas.width; x++) {
+        const y =
+          centerY +
+          Math.sin(x * frequency + time * wave.speed) * amplitude
+
+        ctx.lineTo(x, y)
+      }
+
+      ctx.stroke()
+    }
+
+    function animate() {
+      requestAnimationFrame(animate)
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
+
+      const volume = getVolume()
+
+      waves.forEach((wave, index) => {
+        drawWave(wave, volume, index)
+      })
+
+      time++
+    }
+
+    initMic()
+  </script>
+</body>
+</html>
+

@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Interaction Visualizer</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #050505; /* Deep, almost black background */
+            overflow: hidden;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        #canvas-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        /* UI Overlay for the Start Button */
+        #overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            z-index: 10;
+            pointer-events: none; /* Let clicks pass through after fading */
+            transition: opacity 0.5s ease;
+        }
+
+        button {
+            pointer-events: auto;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 15px 40px;
+            font-size: 16px;
+            border-radius: 30px;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        button:hover {
+            background: rgba(255, 255, 255, 0.25);
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+        }
+
+        .hidden {
+            opacity: 0;
+        }
+    </style>
+</head>
+<body>
+
+<div id="canvas-container">
+    <div id="overlay">
+        <button id="start-btn">Initialize Microphone</button>
+    </div>
+    <canvas id="visualizer"></canvas>
+</div>
+
+<script>
+/**
+ * CONFIGURATION
+ * Adjust these values to tweak the look and feel.
+ */
+const CONFIG = {
+    lineCount: 10,           // Number of wave lines
+    baseAmplitude: 10,      // Resting height (breathing effect)
+    voiceSensitivity: 2,  // Multiplier for voice reaction
+    speed: 0.2,            // Speed of the wave movement
+    smoothing: 0.9,        // LERP factor (0.01 = sluggish, 0.9 = instant)
+    colors: [
+        [255, 50, 50],    // Red-ish
+        [255, 150, 50],   // Orange
+        [50, 150, 255],   // Blue
+        [180, 50, 255],   // Purple
+        [50, 255, 150]    // Green/Teal
+    ]
+};
+
+// --- AUDIO CONTROLLER ---
+// Handles the Web Audio API complexities
+class AudioController {
+    constructor() {
+        this.initialized = false;
+        this.audioContext = null;
+        this.analyser = null;
+        this.dataArray = null;
+        this.source = null;
+        this.volume = 0; // Current smoothed volume (0 to 1)
+    }
+
+    async init() {
+        try {
+            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            this.analyser = this.audioContext.createAnalyser();
+            this.analyser.fftSize = 512; // Controls resolution of data
+            this.analyser.smoothingTimeConstant = 0.4; // Hardware smoothing
+
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            this.source = this.audioContext.createMediaStreamSource(stream);
+            this.source.connect(this.analyser);
+            
+            this.dataArray = new Uint8Array(this.analyser.frequencyBinCount);
+            this.initialized = true;
+        } catch (err) {
+            console.error("Microphone access denied or error:", err);
+            alert("Microphone access is required for the visualizer to work.");
+        }
+    }
+
+    update() {
+        if (!this.initialized) return 0;
+        
+        // Get frequency data
+        this.analyser.getByteFrequencyData(this.dataArray);
+
+        // Calculate average volume (RMS-ish)
+        // We focus on the lower/mid frequencies where voice usually sits
+        let sum = 0;
+        const binCount = this.dataArray.length;
+        // Optimization: voice usually lives in the lower half of the FFT bins
+        for (let i = 0; i < binCount / 2; i++) {
+            sum += this.dataArray[i];
+        }
+        
+        // Normalize to 0-1 range
+        const rawVolume = sum / (binCount / 2) / 255;
+        
+        // Apply manual LERP smoothing for the output volume
+        // This prevents the lines from jittering too aggressively
+        this.volume = this.volume + (rawVolume - this.volume) * CONFIG.smoothing;
+        
+        return this.volume;
+    }
+}
+
+// --- WAVE CLASS ---
+// Represents a single oscillating line
+class Wave {
+    constructor(index, totalWaves, canvas) {
+        this.index = index;
+        this.totalWaves = totalWaves;
+        this.canvas = canvas;
+        this.ctx = canvas.getContext('2d');
+        
+        // Generate unique properties for this wave
+        this.color = CONFIG.colors[index % CONFIG.colors.length];
+        this.offset = (Math.PI * 2 * index) / totalWaves; // Phase shift
+        this.amplitudeModifier = 0.5 + (Math.random() * 0.5); // Random height variance
+        this.wavelength = 100 + Math.random() * 100;
+        this.speed = CONFIG.speed * (index % 2 === 0 ? 1 : -1); // Alternate direction
+    }
+
+    draw(volume, time) {
+        const { width, height } = this.canvas;
+        const centerY = height / 2;
+
+        // Calculate dynamic amplitude based on audio volume
+        // We keep a base amplitude so it's never perfectly flat (breathing effect)
+        const currentAmplitude = CONFIG.baseAmplitude + (volume * height * 0.4 * CONFIG.voiceSensitivity * this.amplitudeModifier);
+
+        this.ctx.beginPath();
+        
+        // Use 'screen' or 'lighter' blend mode for glowing effect when lines overlap
+        this.ctx.globalCompositeOperation = 'screen';
+        
+        // Start Drawing the Curve
+        // We draw from x=0 to x=width
+        for (let x = 0; x <= width; x += 5) {
+            // The Wave Equation: y = Amplitude * sin(Frequency * x + Phase)
+            const frequency = x / (this.wavelength + (volume * 100)); // Volume stretches wavelength slightly
+            const phase = time * this.speed + this.offset;
+            
+            // Attenuation: Make the wave taper off at the edges (0 at sides, 1 in center)
+            // This creates the "voice bubble" look
+            const distFromCenter = Math.abs(x - width / 4);
+            const attenuation = Math.max(0, 1 - (distFromCenter / (width / 2)) ** 2);
+            
+            const y = centerY + Math.sin(frequency + phase) * currentAmplitude * attenuation;
+
+            if (x === 0) {
+                this.ctx.moveTo(x, y);
+            } else {
+                this.ctx.lineTo(x, y);
+            }
+        }
+
+        // Styling
+        const alpha = 0.6 + (volume * 0.4); // More opaque when loud
+        const [r, g, b] = this.color;
+        
+        this.ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        this.ctx.lineWidth = 2 + (volume * 3); // Thicker when loud
+        this.ctx.stroke();
+        
+        // Reset composite operation
+        this.ctx.globalCompositeOperation = 'source-over';
+    }
+}
+
+// --- MAIN CONTROLLER ---
+const canvas = document.getElementById('visualizer');
+const ctx = canvas.getContext('2d');
+const startBtn = document.getElementById('start-btn');
+const overlay = document.getElementById('overlay');
+
+let waves = [];
+let audioController = new AudioController();
+let animationTime = 0;
+
+function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    
+    // Re-initialize waves on resize to adjust wavelength scale
+    waves = [];
+    for (let i = 0; i < CONFIG.lineCount; i++) {
+        waves.push(new Wave(i, CONFIG.lineCount, canvas));
+    }
+}
+
+function animate() {
+    // 1. Fade out the previous frame slightly (creates a motion blur/trail effect)
+    // To get crisp lines, clear completely. To get trails, use fillRect with low opacity.
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // 2. Get Audio Data
+    const volume = audioController.update();
+    
+    // 3. Update Time
+    // We increment time. When volume is high, we can speed up time slightly for excitement
+    animationTime += 0.05 + (volume * 0.1); 
+
+    // 4. Draw All Waves
+    waves.forEach(wave => wave.draw(volume, animationTime));
+
+    requestAnimationFrame(animate);
+}
+
+// Initialization
+window.addEventListener('resize', resize);
+
+startBtn.addEventListener('click', async () => {
+    await audioController.init();
+    overlay.classList.add('hidden');
+    resize();
+    animate();
+});
+
+// Initial Setup
+resize();
+
+</script>
+</body>
+</html>

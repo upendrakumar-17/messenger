@@ -5,6 +5,7 @@ export default function useAzureTTS() {
     const ttsBufferRef = useRef("");
     const currentAudioRef = useRef(null);
     const isSpeakingRef = useRef(false);
+    const firstChunkSpokenRef = useRef(false);
 
     const [, forceUpdate] = useState(0); // only to expose isSpeaking
 
@@ -66,27 +67,27 @@ export default function useAzureTTS() {
     //         audio.play().catch(resolve);
     //     });
     const playAudio = (url) =>
-  new Promise((resolve) => {
-    const audio = new Audio(url);
-    audio.muted = false;
-    audio.volume = 1;
-    audio.playbackRate = 1.2;
+        new Promise((resolve) => {
+            const audio = new Audio(url);
+            audio.muted = false;
+            audio.volume = 1;
+            audio.playbackRate = 1.2;
 
-    console.log("Attempting to play audio");
+            console.log("Attempting to play audio");
 
-    audio.onended = audio.onerror = () => {
-      URL.revokeObjectURL(url);
-      resolve();
-    };
-    audio.play().then(() => {
-  console.log("🔊 audio started");
-}).catch(err => {
-  console.warn("❌ audio blocked", err);
-  resolve();
-});
+            audio.onended = audio.onerror = () => {
+                URL.revokeObjectURL(url);
+                resolve();
+            };
+            audio.play().then(() => {
+                console.log("🔊 audio started");
+            }).catch(err => {
+                console.warn("❌ audio blocked", err);
+                resolve();
+            });
 
-    
-  });
+
+        });
 
 
     // ---------- Queue ----------
@@ -108,12 +109,30 @@ export default function useAzureTTS() {
     const bufferTTS = useCallback((text) => {
         ttsBufferRef.current += text;
 
-        const hasEnd = /[.!?]/.test(ttsBufferRef.current);
-        const hasMid = /[,;:]/.test(ttsBufferRef.current);
+        const buffer = ttsBufferRef.current.trim();
+
+        // 🟢 FIRST WORD / FIRST CHUNK
+        if (!firstChunkSpokenRef.current && buffer.split(" ").length >= 100) {
+            firstChunkSpokenRef.current = true;
+
+            const chunk = buffer;
+            ttsBufferRef.current = "";
+
+            ttsQueueRef.current.push({
+                text: chunk,
+                audioPromise: fetchAudioFromAzure(chunk),
+            });
+
+            if (!isSpeakingRef.current) playNext();
+            return;
+        }
+
+        // 🟡 NORMAL SENTENCE LOGIC
+        const hasEnd = /[.!?]/.test(buffer);
+        const hasMid = /[,;:]/.test(buffer);
 
         if (hasEnd) {
-            const sentences =
-                ttsBufferRef.current.match(/[^.!?]+[.!?]+/g) || [];
+            const sentences = buffer.match(/[^.!?]+[.!?]+/g) || [];
 
             sentences.forEach(s => {
                 ttsQueueRef.current.push({
@@ -124,20 +143,22 @@ export default function useAzureTTS() {
 
             ttsBufferRef.current = "";
             if (!isSpeakingRef.current) playNext();
-        } 
-        else if ((hasMid && ttsBufferRef.current.length > 50) ||
-                 ttsBufferRef.current.length >= 100) {
-            const chunk = ttsBufferRef.current;
+        }
+        else if (
+            (hasMid && buffer.length > 30) ||
+            buffer.length >= 60
+        ) {
             ttsBufferRef.current = "";
 
             ttsQueueRef.current.push({
-                text: chunk,
-                audioPromise: fetchAudioFromAzure(chunk),
+                text: buffer,
+                audioPromise: fetchAudioFromAzure(buffer),
             });
 
             if (!isSpeakingRef.current) playNext();
         }
     }, []);
+
 
     const flushTTS = useCallback(() => {
         if (!ttsBufferRef.current.trim()) return;
@@ -153,35 +174,38 @@ export default function useAzureTTS() {
         if (!isSpeakingRef.current) playNext();
     }, []);
 
+
     const stopTTS = () => {
         currentAudioRef.current?.pause();
         currentAudioRef.current = null;
         ttsQueueRef.current = [];
         ttsBufferRef.current = "";
+        firstChunkSpokenRef.current = false;
         setSpeaking(false);
     };
 
+
     const audioUnlockedRef = useRef(false);
 
-const unlockAudio = async () => {
-  if (audioUnlockedRef.current) return;
+    const unlockAudio = async () => {
+        if (audioUnlockedRef.current) return;
 
-  try {
-    const audio = new Audio();
-    audio.src = "data:audio/mp3;base64,//uQZAAAAAAAAAAAAAAAAAAAA";
-    await audio.play();
-    audioUnlockedRef.current = true;
-    console.log("🔓 Audio unlocked");
-  } catch (e) {
-    console.warn("Audio unlock failed");
-  }
-};
+        try {
+            const audio = new Audio();
+            audio.src = "data:audio/mp3;base64,//uQZAAAAAAAAAAAAAAAAAAAA";
+            await audio.play();
+            audioUnlockedRef.current = true;
+            console.log("🔓 Audio unlocked");
+        } catch (e) {
+            console.warn("Audio unlock failed");
+        }
+    };
 
     return {
         bufferTTS,
         flushTTS,
         stopTTS,
-        unlockAudio, 
+        unlockAudio,
         isSpeaking: isSpeakingRef.current,
     };
 }

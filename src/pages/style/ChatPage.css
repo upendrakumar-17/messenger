@@ -1,65 +1,198 @@
-.chatpage {
-  display: flex;
-  width: 100%;
-  height: 100vh;
-  /* overflow: hidden; */
-}
-/* Page wrapper */
-.chatpage {
-  height: 100vh;
-  width: 100%;
-  background-color: #f5f6f8;
-  display: flex;
+/* ================= Reset and Base ================= */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Inter', sans-serif;
 }
 
-/* Main window */
+body, html, #root {
+  height: 100%;
+  width: 100%;
+  background-color: #f5f5f7;
+  color: #333;
+  overflow: hidden;
+}
+
+/* ================= Chat Page Window ================= */
 .chatpage-window {
-  flex: 1;
-  margin: 16px;
-  border: 1px solid #d0d0d0;
-  background-color: #ffffff;
   display: flex;
   flex-direction: column;
+  height: 100vh;
+  width: 100%;
 }
 
-/* Header */
+/* ================= Header ================= */
 .chatpage-header {
-  padding: 12px 16px;
-  border-bottom: 1px solid #e0e0e0;
-  background-color: #f0f2f5;
-  font-weight: 600;
-}
-
-/* Body */
-.chatpage-body {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-/* Messages area */
-.chatpage-messages {
-  flex: 1;
-  padding: 16px;
-  border-bottom: 1px solid #e0e0e0;
-  background-color: #fafafa;
-}
-
-/* Input section */
-.chatpage-input {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px;
-  background-color: #f0f2f5;
-  border-top: 1px solid #e0e0e0;
+  padding: 0 20px;
+  height: 70px;
+  background: #fff;
+  border-bottom: 1px solid #e0e0e0;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+  z-index: 10;
 }
 
-/* Individual input blocks */
-.chatpage-input > div {
-  padding: 8px 12px;
-  border: 1px solid #d0d0d0;
-  background-color: #ffffff;
-  border-radius: 4px;
-  font-size: 14px;
+.chatpage-heading {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-left: 20px;
+}
+
+/* ================= Sidebar ================= */
+.Sidebar {
+  min-width: 250px;
+  max-width: 300px;
+  height: 100%;
+  overflow-y: auto;
+  background: #fafafa;
+  border-right: 1px solid #e0e0e0;
+}
+
+/* ================= Main Container ================= */
+.chatpage-container {
+  display: flex;
+  flex: 1;
+  background: #f5f5f7;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ================= Chat Body with Layers ================= */
+.chatpage-body {
+  flex: 1;
+  position: relative; /* for layering */
+  overflow: hidden;   
+  display: flex;
+  flex-direction: column;
+}
+
+/* Background Layer */
+.section-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  pointer-events: none; /* clicks go through */
+  background: linear-gradient(135deg, #dbe9ff, #ffffff);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Messages Layer */
+.chatpage-messages {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  background: transparent;
+  scroll-behavior: smooth;
+}
+
+
+
+/* Scrollbar Styling */
+.chatpage-messages::-webkit-scrollbar {
+  width: 6px;
+}
+.chatpage-messages::-webkit-scrollbar-thumb {
+  background-color: rgba(0,0,0,0.2);
+  border-radius: 3px;
+}
+.chatpage-messages::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ================= Message Bubble ================= */
+.MessageBubble {
+  max-width: 70%;
+  padding: 10px 15px;
+  border-radius: 20px;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  word-wrap: break-word;
+}
+
+.MessageBubble[type="in"] {
+  align-self: flex-start;
+  background: #fff;
+  color: #333;
+  border: 1px solid #e0e0e0;
+  border-top-left-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.MessageBubble[type="out"] {
+  align-self: flex-end;
+  background: #4f92ff;
+  color: #fff;
+  border-top-right-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+/* ================= Footer Input Area ================= */
+.chatpage-input {
+  display: flex;
+  flex-direction: column;
+  padding: 10px 20px;
+  background: #fff;
+  border-top: 1px solid #e0e0e0;
+  box-shadow: 0 -2px 5px rgba(0,0,0,0.05);
+}
+
+.footer-controls {
+  display: flex;
+  gap: 10px;
+}
+
+.footer-controls button {
+  padding: 10px 15px;
+  font-size: 1rem;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  background: #4f92ff;
+  color: #fff;
+  transition: all 0.2s ease;
+}
+
+.footer-controls button:hover {
+  background: #3a6fd3;
+}
+
+.footer-controls button:active {
+  transform: scale(0.98);
+}
+
+.footer-visuals,
+.footer-menu {
+  margin-top: 10px;
+}
+
+/* ================= Responsive ================= */
+@media (max-width: 768px) {
+  .chatpage-header {
+    flex-direction: column;
+    height: auto;
+    padding: 10px;
+  }
+
+  .chatpage-body {
+    flex-direction: column;
+  }
+
+  .section-background {
+    display: none; /* hide background on mobile */
+  }
 }

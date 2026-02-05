@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Siri Neural Interface</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #000;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        /* The container handles the glow and positioning */
+        #canvas-container {
+            position: relative;
+            width: 100%;
+            height: 400px; /* Constrained height for the wave strip */
+            opacity: 0; /* Hidden until initialized */
+            transition: opacity 1s ease-in-out;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Minimalist UI for the Start Button */
+        #ui-layer {
+            position: absolute;
+            z-index: 10;
+            text-align: center;
+            transition: opacity 0.5s;
+        }
+
+        button {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 18px 42px;
+            font-size: 14px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            border-radius: 50px;
+            cursor: pointer;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        button:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.05);
+            box-shadow: 0 0 30px rgba(255, 255, 255, 0.1);
+        }
+
+        /* Subtle hints or status text */
+        .hint {
+            margin-top: 15px;
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+
+<div id="ui-layer">
+    <button id="init-btn">Activate Interface</button>
+    <div class="hint">Microphone access required</div>
+</div>
+
+<div id="canvas-container">
+    <canvas id="siri-canvas"></canvas>
+</div>
+
+<script>
+/**
+ * SIRI WAVEFORM CONFIGURATION
+ * These constants are tuned to match the iOS visual style.
+ */
+const CONFIG = {
+    // The specific "Siri" color palette (R, G, B)
+    curves: [
+        { color: [50, 255, 255], amplitude: 1.0, speed: 0.2, attenuation: -2 },   // Cyan (Main)
+        { color: [255, 50, 100], amplitude: 0.7, speed: 0.15, attenuation: -1.5 }, // Red/Pink
+        { color: [50, 255, 100], amplitude: 0.5, speed: 0.1, attenuation: -1.5 },  // Green
+        { color: [50, 100, 255], amplitude: 0.6, speed: 0.25, attenuation: 1 }    // Blue
+    ],
+    globalAmplitude: 1.0,
+    speed: 0.05,
+    sampleRate: 4     // Draw every Nth pixel (Lower = higher res, Higher = faster perf)
+};
+
+// --- AUDIO PROCESSING ---
+class AudioEngine {
+    constructor() {
+        this.ctx = null;
+        this.analyser = null;
+        this.dataArray = null;
+        this.volume = 0;
+    }
+
+    async init() {
+        this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        this.analyser = this.ctx.createAnalyser();
+        
+        // FFT Size: Needs to be small enough for speed, large enough for detail
+        this.analyser.fftSize = 512; 
+        this.analyser.smoothingTimeConstant = 0.5; // Smooths out the jitter
+
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const source = this.ctx.createMediaStreamSource(stream);
+            source.connect(this.analyser);
+            this.dataArray = new Uint8Array(this.analyser.frequencyBinCount);
+            return true;
+        } catch (e) {
+            console.error(e);
+            return false;
+        }
+    }
+
+    getVolume() {
+        if (!this.analyser) return 0;
+        this.analyser.getByteFrequencyData(this.dataArray);
+        
+        let sum = 0;
+        // We focus on the lower 30% of frequencies (human voice range)
+        const len = Math.floor(this.dataArray.length * 0.3);
+        for (let i = 0; i < len; i++) {
+            sum += this.dataArray[i];
+        }
+        
+        // Normalize 0-1
+        return sum / len / 255;
+    }
+}
+
+// --- VISUALIZER ---
+class SiriWave {
+    constructor(canvas) {
+        this.canvas = canvas;
+        this.ctx = canvas.getContext('2d', { alpha: false }); // Alpha false for perf
+        this.dpr = window.devicePixelRatio || 1;
+        
+        this.width = 0;
+        this.height = 0;
+        this.phase = 0;
+        this.currentVolume = 0;
+        
+        this.resize();
+        window.addEventListener('resize', () => this.resize());
+    }
+
+    resize() {
+        this.width = this.canvas.offsetWidth;
+        this.height = this.canvas.offsetHeight;
+        
+        // Retina Display Support
+        this.canvas.width = this.width * this.dpr;
+        this.canvas.height = this.height * this.dpr;
+        this.ctx.scale(this.dpr, this.dpr);
+    }
+
+    /**
+     * The Mathematical Core
+     * x: The current pixel position (0 to 1)
+     * phase: The current animation time
+     * k: Attenuation factor (controls how sharp the curve is)
+     */
+    _globalAttenuation(x) {
+        // The "Siri Graph" envelope (Parabolic)
+        // Forces the wave to be 0 at x=0 and x=1, and max at x=0.5
+        return Math.pow(4 * x * (1 - x), 4); // The power of 4 creates a tighter center
+    }
+
+    _drawCurve(curve, volume) {
+        this.ctx.beginPath();
+        
+        const [r, g, b] = curve.color;
+        // Alpha is dynamic based on volume (louder = brighter)
+        const alpha = 0.5 + (volume * 0.5); 
+        this.ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        this.ctx.lineWidth = 2 * this.dpr; // Thinner lines look more elegant
+
+        // Optimization: Don't draw every pixel
+        for (let i = 0; i <= this.width; i += CONFIG.sampleRate) {
+            const x = i / this.width; // Normalized X (0 to 1)
+            
+            // 1. The Attenuation (The Envelope)
+            const attenuation = this._globalAttenuation(x);
+            
+            // 2. The Oscillation (The Wave)
+            // Frequency is modified by position (denser in middle)
+            const frequency = 6; 
+            const yOffset = Math.sin(frequency * x * Math.PI - this.phase * curve.speed);
+            
+            // 3. Amplitude Calculation
+            // Base amplitude (breathing) + Voice Reaction
+            const baseAmp = this.height * 0.1; // Idle height
+            const voiceAmp = this.height * 0.3 * volume * 2.5; // Reaction height
+            
+            const totalAmp = (baseAmp + voiceAmp) * curve.amplitude;
+            
+            // 4. Final Position
+            const y = (this.height / 2) + yOffset * totalAmp * attenuation;
+            
+            if (i === 0) this.ctx.moveTo(i, y);
+            else this.ctx.lineTo(i, y);
+        }
+
+        this.ctx.stroke();
+    }
+
+    draw(volume) {
+        // Clear with black
+        this.ctx.fillStyle = "#000000";
+        this.ctx.fillRect(0, 0, this.width, this.height);
+
+        // Physics Smoothing (Lerp)
+        // current = current + (target - current) * smoothness
+        this.currentVolume += (volume - this.currentVolume) * 0.15;
+
+        // Additive Blending (Crucial for the "Glow")
+        this.ctx.globalCompositeOperation = "lighter";
+
+        CONFIG.curves.forEach(curve => {
+            this._drawCurve(curve, this.currentVolume);
+        });
+
+        // Reset blending
+        this.ctx.globalCompositeOperation = "source-over";
+
+        // Increment Time
+        // We speed up the phase when loud to make it look "excited"
+        this.phase += CONFIG.speed + (this.currentVolume * 0.1);
+    }
+}
+
+// --- MAIN CONTROLLER ---
+const btn = document.getElementById('init-btn');
+const ui = document.getElementById('ui-layer');
+const container = document.getElementById('canvas-container');
+const canvas = document.getElementById('siri-canvas');
+
+const audio = new AudioEngine();
+const wave = new SiriWave(canvas);
+
+function animate() {
+    const vol = audio.getVolume();
+    wave.draw(vol);
+    requestAnimationFrame(animate);
+}
+
+btn.addEventListener('click', async () => {
+    const authorized = await audio.init();
+    if (authorized) {
+        // Fade out UI
+        ui.style.opacity = '0';
+        setTimeout(() => ui.style.display = 'none', 500);
+        
+        // Fade in Canvas
+        container.style.opacity = '1';
+        
+        animate();
+    } else {
+        alert("Microphone access denied. Please allow microphone access to see the visualization.");
+    }
+});
+</script>
+</body>
+</html>

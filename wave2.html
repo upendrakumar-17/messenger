@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Single Sine Interaction</title>
+    <style>
+        body {
+            margin: 0;
+            background: #000;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: monospace;
+        }
+        
+        canvas {
+            display: block;
+        }
+
+        #ui {
+            position: absolute;
+            z-index: 10;
+            color: rgba(255, 255, 255, 0.5);
+            text-align: center;
+            pointer-events: none;
+        }
+
+        button {
+            pointer-events: auto;
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: #fff;
+            padding: 10px 20px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: #fff;
+        }
+    </style>
+</head>
+<body>
+
+<div id="ui">
+    <button id="start">CLICK TO START</button>
+</div>
+<canvas id="canvas"></canvas>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const ui = document.getElementById('ui');
+
+// CONFIGURATION
+const CONFIG = {
+    color: '#00d2ff',      // Cyan electric color
+    baseAmplitude: 20,     // Slight breathing movement when silent
+    maxAmplitude: 150,     // Max height when loud
+    speed: 0.001,           // Speed of the oscillation
+    smoothing: 0.1         // 0.1 = smooth, 0.9 = very reactive
+};
+
+let audioContext, analyser, dataArray;
+let isRunning = false;
+let currentVolume = 0;
+let phase = 0;
+
+// Resize canvas
+function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resize);
+resize();
+
+// Audio Initialization
+async function initAudio() {
+    try {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        analyser = audioContext.createAnalyser();
+        analyser.fftSize = 512;
+        
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const source = audioContext.createMediaStreamSource(stream);
+        source.connect(analyser);
+        
+        dataArray = new Uint8Array(analyser.frequencyBinCount);
+        isRunning = true;
+        ui.style.display = 'none';
+        animate();
+    } catch (e) {
+        console.error(e);
+        alert("Microphone access required.");
+    }
+}
+
+document.getElementById('start').addEventListener('click', initAudio);
+
+function getVolume() {
+    if (!analyser) return 0;
+    analyser.getByteFrequencyData(dataArray);
+    
+    // Calculate average volume of lower frequencies (voice range)
+    let sum = 0;
+    // We only look at the first 1/4 of bins for deeper voice data
+    const len = dataArray.length / 4; 
+    for (let i = 0; i < len; i++) {
+        sum += dataArray[i];
+    }
+    return sum / len; // Average 0-255
+}
+
+function animate() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // 1. Get smoothed volume
+    const rawVol = getVolume();
+    const targetVol = rawVol / 255; // Normalize 0-1
+    // Lerp for smoothness: current = current + (target - current) * 0.1
+    currentVolume += (targetVol - currentVolume) * CONFIG.smoothing;
+
+    const centerY = canvas.height / 2;
+    const width = canvas.width;
+    
+    // 2. Draw the Line
+    ctx.beginPath();
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = CONFIG.color;
+    
+    // Shadow for "glow" effect
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = CONFIG.color;
+
+    // Loop through pixels
+    // Step size 2 for performance (calculating every single pixel is unnecessary)
+    for (let x = 0; x <= width; x += 2) {
+        
+        // A. The Normal Graph Envelope (The "Bell Curve" Constraint)
+        // Math.sin(Math.PI * (x / width)) creates an arc that is 0 at ends, 1 in center.
+        const envelope = Math.sin(Math.PI * (x / width));
+        
+        // B. The Oscillation
+        // As x increases, we move through the sine wave. 
+        // We stretch the wavelength slightly based on volume for a "springy" feel.
+        const frequency = x / 50; 
+        const wave = Math.sin(frequency + phase);
+        
+        // C. Combine: Base Height + (Wave * Envelope * Volume)
+        const totalAmp = CONFIG.baseAmplitude + (currentVolume * CONFIG.maxAmplitude);
+        const y = centerY + (wave * envelope * totalAmp);
+
+        if (x === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+    }
+    
+    ctx.stroke();
+    
+    // Reset shadow for performance
+    ctx.shadowBlur = 0;
+
+    // Update phase for movement
+    phase += CONFIG.speed + (currentVolume * 0.1); // Speed up slightly when loud
+
+    if (isRunning) requestAnimationFrame(animate);
+}
+</script>
+</body>
+</html>
