@@ -1,39 +1,68 @@
+:root {
+  --accent: #0ea5a4;
+  --muted: #6b7280;
+  --bubble-in-bg: #e6fffb; /* pale teal */
+  --bubble-out-bg: #eef2ff; /* pale indigo */
+  --bubble-color: #071232;
+  --bubble-radius: 18px;
+  --bubble-shadow: 0 6px 18px rgba(2,6,23,0.06);
+}
+
 /* Message row */
 .message-row {
   display: flex;
   margin-bottom: 10px;
+  width: 100%;
 }
 
 /* Base bubble */
 .message-bubble {
-  max-width: 60%;
-  padding: 15px 20px;
-  border-radius: 30px;
-  font-size: 16px;
-  line-height: 1.5;
+  max-width: 88%; /* mobile-first */
+  padding: 12px 14px;
+  border-radius: var(--bubble-radius);
+  font-size: 15px;
+  line-height: 1.4;
   word-wrap: break-word;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--bubble-shadow);
+  color: var(--bubble-color);
+  transition: transform 160ms ease, box-shadow 160ms ease;
 }
 
-/* Incoming (Patient) */
+/* Larger screens: keep bubbles narrower */
+@media (min-width: 768px) {
+  .message-bubble { max-width: 60%; padding:16px 20px; }
+}
+
+/* Incoming (left aligned) */
 .message-bubble.in {
   margin-left: auto;
-  background: #9cdcff;
-  color: #000000;
-  border: 1px solid  #888888;
-  border-bottom-right-radius: 4px;
+  margin-right: 0;
+  background: var(--bubble-in-bg);
+  border: 1px solid rgba(14,165,164,0.12);
 }
 
-/* Outgoing (Hospital / Bot) */
+/* Outgoing (right aligned) */
 .message-bubble.out {
+  margin-left: 0;
   margin-right: auto;
-  background: #7cb9ff;            /* calm medical blue */
-  color: #000000;
-  border: 1px solid #888888;
-  border-bottom-left-radius: 4px;
+  background: var(--bubble-out-bg);
+  border: 1px solid rgba(99,102,241,0.06);
 }
 
-/* Accessibility: focus & selection */
-.message-bubble::selection {
-  background: rgba(59, 130, 246, 0.2);
+/* Focus and hover */
+.message-bubble:focus,
+.message-bubble:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px rgba(2,6,23,0.08);
+  outline: none;
 }
+
+/* Make bubbles keyboard-focusable clear */
+.message-bubble:focus { box-shadow: 0 0 0 3px rgba(14,165,164,0.12); }
+
+/* Selection contrast */
+.message-bubble::selection { background: rgba(14,165,164,0.14); }
+
+/* Minimal accessibility helper: reduce visual clutter when printing */
+@media print { .message-bubble { box-shadow:none; } }
+

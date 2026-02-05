@@ -1,0 +1,128 @@
+:root{
+  --accent: #0ea5a4;
+  --muted: #6b7280;
+  --bg: #fff;
+}
+
+/* .chatpage-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:12px 16px;
+  border-bottom:1px solid rgba(2,6,23,0.04);
+  background:var(--bg);
+} */
+
+/* .chatpage-heading{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  flex:1;
+} */
+
+
+.heading-sub{
+  font-size:12px;
+  color:var(--muted);
+}
+
+/* New header class aliases to match Header.jsx */
+.header-container { /* same as .chatpage-header */
+  background: rgba(255, 255, 255, 0.15); /* translucent */
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px); /* Safari */
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:12px 16px;
+  border-bottom:1px solid rgba(2,6,23,0.04);
+}
+
+.header { /* replaces .chatpage-heading usage in JSX */
+  display:flex;
+  align-items:center;
+  gap:12px;
+  flex:1;
+}
+
+.header-logo{
+  width:36px;
+  height:36px;
+  border-radius:8px;
+  background:var(--accent);
+  color:#fff;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:700;
+}
+
+.header-title{ /* JSX uses this class */
+  font-weight:700;
+  color:#ffffff;
+}
+
+.header-menu{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+
+.header-action{
+  border:none;
+  background:transparent;
+  padding:8px;
+  border-radius:8px;
+  cursor:pointer;
+  color:var(--muted);
+}
+
+.header-action:hover{background:rgba(2,6,23,0.03)}
+
+.header-action{
+  border:none;
+  background:transparent;
+  padding:8px;
+  border-radius:8px;
+  cursor:pointer;
+  color:var(--muted);
+}
+
+.header-action:hover{background:rgba(2,6,23,0.03)}
+
+.header-menu-wrapper{position:relative}
+.header-menu-pop{
+  position:absolute;
+  right:0;
+  top:44px;
+  background:var(--bg);
+  box-shadow:0 10px 30px rgba(2,6,23,0.08);
+  border-radius:10px;
+  overflow:hidden;
+  z-index:1400;
+}
+
+.header-menu-item{
+  width:100%;
+  padding:10px 12px;
+  border:none;
+  background:transparent;
+  text-align:left;
+  cursor:pointer;
+}
+
+.menu-item:hover{background:rgba(2,6,23,0.03)}
+
+/* @media(min-width:992px){
+  .header-container{padding:18px 28px}
+  .chatpage-heading{align-items:flex-start}
+} */
+
+/* Very small screens (<=50px) show only the icon/logo; hide title */
+@media (max-width: 500px) {
+  .header-title {
+    display: none;
+  }
+}

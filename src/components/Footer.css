@@ -1,0 +1,86 @@
+:root{
+  --accent: #0ea5a4;
+  --muted: #6b7280;
+  --bg: #fff;
+  --shadow-top: 0 -8px 24px rgba(2,6,23,0.06);
+}
+
+.chatpage-input, .chatpage-input {
+  background: rgba(255, 255, 255, 0.15); /* translucent */
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px); /* Safari */
+  position: sticky;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  /* background: var(--bg); */
+  box-shadow: var(--shadow-top);
+  z-index: 1200;
+  border-radius: 20px;
+}
+
+.footer-controls{
+  display:flex;
+  gap:8px;
+  align-items:center;
+}
+
+.footer-btn{
+  border: none;
+  background: transparent;
+  padding: 8px;
+  border-radius: 10px;
+  cursor: pointer;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  color:var(--muted);
+}
+
+.footer-btn:focus{outline:2px solid rgba(14,165,164,0.18); outline-offset:2px}
+
+.footer-btn-primary{
+  width:48px;
+  height:48px;
+  background: linear-gradient(135deg, rgba(14,165,164,0.12), rgba(14,165,164,0.06));
+  color:var(--accent);
+  font-weight:700;
+}
+
+.footer-btn-primary.listening{ 
+    width:48px;
+  height:48px;
+  background: linear-gradient(135deg, rgba(14,165,164,0.12), rgba(14,165,164,0.06));
+  color:var(--accent);
+  font-weight:700;
+}
+
+.footer-btn-ghost{ padding:8px }
+
+.footer-menu{ display:flex; align-items:center }
+
+.footer-menu-btn{ padding:8px; border-radius:8px }
+
+.footer-visuals{ display:flex; align-items:center; justify-content:center; flex:1 }
+
+.mic-wrap{ width:44px; height:44px; display:flex; align-items:center; justify-content:center }
+.mic-dot{ width:10px; height:10px; border-radius:50%; background:linear-gradient(135deg,#c7f9f7,#7fe7e5); }
+.mic-dot.pulse{ box-shadow:0 0 0 0 rgba(14,165,164,0.25); animation: pulse 1200ms infinite; }
+
+@keyframes pulse{ 0% { box-shadow:0 0 0 0 rgba(14,165,164,0.25)} 70%{ box-shadow:0 0 0 18px rgba(14,165,164,0)} 100%{ box-shadow:0 0 0 0 rgba(14,165,164,0)} }
+
+/* Mobile-first: centralize primary control on narrow screens */
+/* @media (max-width: 520px){
+  .chatpage-input{ padding:12px; }
+  .footer-visuals{ order:0 }
+  .footer-controls{ order:1 }
+  .footer-menu{ order:2 }
+} */
+
+/* visually-hidden for screen readers */
+.visually-hidden{ position:absolute !important; height:1px; width:1px; overflow:hidden; clip:rect(1px,1px,1px,1px); white-space:nowrap }

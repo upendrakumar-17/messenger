@@ -145,7 +145,7 @@ export default function useAzureTTS() {
             if (!isSpeakingRef.current) playNext();
         }
         else if (
-            (hasMid && buffer.length > 30) ||
+            (hasMid && buffer.length > 60) ||
             buffer.length >= 60
         ) {
             ttsBufferRef.current = "";

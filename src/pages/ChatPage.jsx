@@ -4,9 +4,10 @@ import MessageBubble from '../components/MessageBubble'
 import { useSpeechRecognition } from '../hooks/useSpeechRecognition'
 import Sidebar from '../components/Sidebar';
 import useAzureTTS from "../hooks/useAzureTTS";
-import SandDunes from '../components/SandDunes';
-import DotVisualizer from '../components/VoiceOrb';
-import SiriOrb from '../components/SiriOrb';
+import Footer from '../components/Footer';
+import Header from '../components/Header';
+import Background from '../components/Background';
+
 
 const LOCAL_KEY = 'saved-chats'
 const ACTIVE_KEY = 'active-chat-id'
@@ -206,24 +207,21 @@ const ChatPage = () => {
      ---------------------- */
   return (
     <div className="chatpage-window">
-
-      <header className="chatpage-header">
-        <Sidebar
-          chats={chats}
-          activeChatId={activeChatId}
-          onNewChat={handleNewChat}
-          onSelectChat={handleSelectChat}
-          onDeleteChat={handleDeleteChat}
-        />
-        <div className='chatpage-heading'>Chat heading</div>
-      </header>
+      <div className="chatpage-bg"  >
+        <Background/>
+      </div>
+      <Header
+        chats={chats}
+        activeChatId={activeChatId}
+        onNewChat={handleNewChat}
+        onSelectChat={handleSelectChat}
+        onDeleteChat={handleDeleteChat}
+        title="Chat heading"
+      />
       <main className="chatpage-container">
         <section className="chatpage-body">
           <div className='section-background'>
-            {/* <SandDunes/> */}
-            {/* <DotVisualizer/> */}
-            <SiriOrb/>
-            
+
           </div>
           <div className="chatpage-messages">
 
@@ -248,33 +246,18 @@ const ChatPage = () => {
             )}
           </div>
         </section>
-        <footer className="chatpage-input">
-          <div className='footer-controls'>
 
-            <button
-              onClick={async () => {
-                await unlockAudio();
-                stopTTS();
-                toggleListening();
-              }}
-            >
-              {isListening ? '⏹ Stop' : '🎤 Speak'}
-            </button>
-            <button
-              onClick={() => {
-                stopTTS()
-              }}>
-              cancel
-            </button>
-
-          </div>
-          <div className='footer-visuals'>
-
-          </div>
-          <div className='footer-menu'>
-
-          </div>
-        </footer>
+        <Footer
+          isListening={isListening}
+          onToggleListening={async () => {
+            await unlockAudio()
+            stopTTS()
+            toggleListening()
+          }}
+          onCancel={() => {
+            stopTTS()
+          }}
+        />
       </main>
     </div>
   )
